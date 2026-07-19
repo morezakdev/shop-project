@@ -1,0 +1,51 @@
+from rest_framework import serializers
+from .models import Category, Product, ProductVariant
+from module_common.fields import JalaliDateTimeField
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ["id", "name", "slug", "parent", "is_active"]
+
+
+class ProductVariantSerializer(serializers.ModelSerializer):
+    is_available = serializers.ReadOnlyField()
+
+    class Meta:
+        model = ProductVariant
+        fields = ["id", "color", "size", "price", "stock", "sku", "is_available"]
+
+
+class ProductListSerializer(serializers.ModelSerializer):
+    """برای نمایش خلاصه توی لیست محصولات"""
+
+    min_price = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = ["id", "name", "slug", "image", "min_price", "is_active"]
+
+    def get_min_price(self, obj):
+        variant = obj.variants.order_by("price").first()
+        return variant.price if variant else None
+
+
+class ProductDetailSerializer(serializers.ModelSerializer):
+    categories = CategorySerializer(many=True, read_only=True)
+    variants = ProductVariantSerializer(many=True, read_only=True)
+    created_at = JalaliDateTimeField(read_only=True)
+
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "description",
+            "image",
+            "categories",
+            "variants",
+            "is_active",
+            "created_at",
+        ]
