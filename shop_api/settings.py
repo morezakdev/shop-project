@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "module_catalog",
     "module_common",
     "module_cart",
+    "module_orders",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -140,9 +141,16 @@ REST_FRAMEWORK = {
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 12,
-    'EXCEPTION_HANDLER': 'module_common.exceptions.custom_exception_handler',
+    "EXCEPTION_HANDLER": "module_common.exceptions.custom_exception_handler",
 }
-
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Shop API",
+    "DESCRIPTION": "مستندات API فروشگاه",
+    "VERSION": "1.0.0",
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
+    },
+}
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
