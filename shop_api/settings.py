@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "module_accounts",
     "module_catalog",
     "module_common",
+    "module_cart",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -139,6 +140,7 @@ REST_FRAMEWORK = {
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 12,
+    'EXCEPTION_HANDLER': 'module_common.exceptions.custom_exception_handler',
 }
 
 
