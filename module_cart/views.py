@@ -56,14 +56,20 @@ class AddCartItemView(APIView):
 
         cart_item = CartItem.objects.filter(cart=cart, variant=variant).first()
         existing_quantity = cart_item.quantity if cart_item else 0
-        available = get_cart_available(variant, exclude_cart_item=cart_item)
-        new_total = existing_quantity + quantity
 
-        if new_total > available:
+
+        cap_excluding_self = get_cart_available(variant, exclude_cart_item=cart_item)
+
+
+        remaining_for_you = cap_excluding_self - existing_quantity
+
+        if quantity > remaining_for_you:
             return Response(
-                {"detail": f"موجودی قابل خرید : {available}"},
+                {"detail": f"موجودی قابل افزودن: {remaining_for_you}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        new_total = existing_quantity + quantity
 
         if cart_item:
             cart_item.quantity = new_total

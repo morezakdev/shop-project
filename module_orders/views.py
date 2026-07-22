@@ -43,6 +43,9 @@ class CheckoutView(APIView):
         serializer = CheckoutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         address = serializer.validated_data["address"]
+        first_name = serializer.validated_data["first_name"]
+        last_name = serializer.validated_data["last_name"]
+        postal_code = serializer.validated_data["postal_code"]
 
         try:
             cart = Cart.objects.get(user=request.user)
@@ -76,7 +79,12 @@ class CheckoutView(APIView):
 
             total_price = sum(item.variant.price * item.quantity for item in cart_items)
             order = Order.objects.create(
-                user=request.user, address=address, total_price=total_price
+                user=request.user,
+                address=address,
+                first_name=first_name,
+                last_name=last_name,
+                postal_code=postal_code,
+                total_price=total_price,
             )
 
             for item in cart_items:
@@ -118,6 +126,9 @@ class QuickBuyView(APIView):
         variant_id = serializer.validated_data["variant_id"]
         quantity = serializer.validated_data["quantity"]
         address = serializer.validated_data["address"]
+        first_name = serializer.validated_data["first_name"]
+        last_name = serializer.validated_data["last_name"]
+        postal_code = serializer.validated_data["postal_code"]
 
         with transaction.atomic():
             variant = get_object_or_404(
@@ -136,6 +147,9 @@ class QuickBuyView(APIView):
             order = Order.objects.create(
                 user=request.user,
                 address=address,
+                first_name=first_name,
+                last_name=last_name,
+                postal_code=postal_code,
                 total_price=variant.price * quantity,
             )
             OrderItem.objects.create(

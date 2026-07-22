@@ -22,9 +22,9 @@ class Order(models.Model):
         related_name="orders",
         verbose_name="کاربر",
     )
-    first_name = models.CharField("نام", max_length=255, null=True, blank=True)
-    last_name = models.CharField("نام خانوادگی", max_length=255, null=True, blank=True)
-    postal_code = models.CharField("کد پستی", max_length=255, null=True, blank=True)
+    first_name = models.CharField("نام", max_length=255)
+    last_name = models.CharField("نام خانوادگی", max_length=255)
+    postal_code = models.CharField("کد پستی", max_length=255)
     address = models.TextField("آدرس تحویل")
     status = models.CharField(
         "وضعیت", max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING
