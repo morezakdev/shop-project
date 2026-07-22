@@ -1,14 +1,14 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from rest_framework.throttling import ScopedRateThrottle
 from django.shortcuts import get_object_or_404
-from django.db import transaction
 from drf_spectacular.utils import extend_schema, OpenApiExample
-
 from .models import Cart, CartItem
 from .serializers import CartSerializer, AddCartItemSerializer, UpdateCartItemSerializer
-from .utils import release_expired_cart_items
+from .utils import release_expired_cart_items, get_cart_available, check_cooldown
 from module_catalog.models import ProductVariant
+from django.db import transaction
 
 
 class CartView(APIView):
@@ -24,6 +24,8 @@ class CartView(APIView):
 
 class AddCartItemView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "cart_add"
 
     @extend_schema(
         request=AddCartItemSerializer,
@@ -33,7 +35,7 @@ class AddCartItemView(APIView):
                 "Request example",
                 value={"variant_id": 1, "quantity": 2},
                 request_only=True,
-            ),
+            )
         ],
     )
     def post(self, request):
@@ -42,30 +44,34 @@ class AddCartItemView(APIView):
         variant_id = serializer.validated_data["variant_id"]
         quantity = serializer.validated_data["quantity"]
 
+        variant = get_object_or_404(ProductVariant, id=variant_id)
         cart, created = Cart.objects.get_or_create(user=request.user)
         release_expired_cart_items(cart)
 
-        with transaction.atomic():
-            variant = get_object_or_404(
-                ProductVariant.objects.select_for_update(), id=variant_id
+        cooldown_msg = check_cooldown(request.user, variant)
+        if cooldown_msg:
+            return Response(
+                {"detail": cooldown_msg}, status=status.HTTP_400_BAD_REQUEST
             )
 
-            if quantity > variant.stock:
-                return Response(
-                    {"detail": f"موجودی کافی نیست. موجودی فعلی: {variant.stock}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        cart_item = CartItem.objects.filter(cart=cart, variant=variant).first()
+        existing_quantity = cart_item.quantity if cart_item else 0
+        available = get_cart_available(variant, exclude_cart_item=cart_item)
+        new_total = existing_quantity + quantity
 
-            cart_item, item_created = CartItem.objects.get_or_create(
-                cart=cart, variant=variant, defaults={"quantity": 0}
+        if new_total > available:
+            return Response(
+                {"detail": f"موجودی قابل خرید : {available}"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-            # رزرو: موجودی رو بلافاصله کم می‌کنیم
-            variant.stock -= quantity
-            variant.save()
-
-            cart_item.quantity += quantity
+        if cart_item:
+            cart_item.quantity = new_total
             cart_item.save()
+        else:
+            cart_item = CartItem.objects.create(
+                cart=cart, variant=variant, quantity=new_total
+            )
 
         return Response(CartSerializer(cart).data, status=status.HTTP_200_OK)
 
@@ -102,8 +108,6 @@ class UpdateCartItemView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # diff مثبت یعنی نیاز به رزرو بیشتر (کم کردن از موجودی)
-            # diff منفی یعنی آزادسازی بخشی از رزرو قبلی (برگردوندن به موجودی)
             variant.stock -= diff
             variant.save()
 

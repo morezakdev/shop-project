@@ -1,5 +1,5 @@
 from django.contrib import admin
-from module_common.utils import to_jalali_date
+from module_common.admin import JalaliAdminMixin
 from .models import Category, Product, ProductVariant
 
 
@@ -9,28 +9,20 @@ class ProductVariantInline(admin.TabularInline):
 
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "parent", "is_active", "jalali_created_at")
-    list_filter = ("is_active",)
-    search_fields = ("name",)
-    prepopulated_fields = {"slug": ("name",)}
-
-    def jalali_created_at(self, obj):
-        return to_jalali_date(obj.created_at)
-
-    jalali_created_at.short_description = "تاریخ ایجاد"
+class CategoryAdmin(JalaliAdminMixin, admin.ModelAdmin):
+    jalali_date_fields = ['created_at']
+    list_display = ('name', 'parent', 'is_active', 'jalali_created_at')
+    list_filter = ('is_active',)
+    search_fields = ('name',)
+    prepopulated_fields = {'slug': ('name',)}
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
-    list_display = ("name", "is_active", "jalali_created_at")
-    list_filter = ("is_active", "categories")
-    search_fields = ("name",)
-    prepopulated_fields = {"slug": ("name",)}
-    filter_horizontal = ("categories",)
+class ProductAdmin(JalaliAdminMixin, admin.ModelAdmin):
+    jalali_date_fields = ['created_at']
+    list_display = ('name', 'is_active', 'jalali_created_at')
+    list_filter = ('is_active', 'categories')
+    search_fields = ('name',)
+    prepopulated_fields = {'slug': ('name',)}
+    filter_horizontal = ('categories',)
     inlines = [ProductVariantInline]
-
-    def jalali_created_at(self, obj):
-        return to_jalali_date(obj.created_at)
-
-    jalali_created_at.short_description = "تاریخ ایجاد"

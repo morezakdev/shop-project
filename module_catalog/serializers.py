@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Category, Product, ProductVariant
 from module_common.fields import JalaliDateTimeField
+from module_cart.utils import get_quickbuy_available
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -10,11 +11,26 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ProductVariantSerializer(serializers.ModelSerializer):
-    is_available = serializers.ReadOnlyField()
+    available_stock = serializers.SerializerMethodField()
+    is_available = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductVariant
-        fields = ["id", "color", "size", "price", "stock", "sku", "is_available"]
+        fields = [
+            "id",
+            "color",
+            "size",
+            "price",
+            "available_stock",
+            "sku",
+            "is_available",
+        ]
+
+    def get_available_stock(self, obj):
+        return get_quickbuy_available(obj)
+
+    def get_is_available(self, obj):
+        return get_quickbuy_available(obj) > 0
 
 
 class ProductListSerializer(serializers.ModelSerializer):
@@ -49,3 +65,6 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "is_active",
             "created_at",
         ]
+
+
+from module_cart.utils import get_quickbuy_available

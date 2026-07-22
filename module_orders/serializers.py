@@ -60,3 +60,9 @@ class CheckoutSerializer(serializers.Serializer):
     first_name = serializers.CharField()
     last_name = serializers.CharField()
     postal_code = serializers.CharField()
+
+
+class QuickBuySerializer(serializers.Serializer):
+    variant_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1, default=1)
+    address = serializers.CharField(min_length=10, max_length=500)

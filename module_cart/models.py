@@ -51,3 +51,21 @@ class CartItem(models.Model):
     @property
     def total_price(self):
         return self.variant.price * self.quantity
+
+
+class CartReservationCooldown(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="کاربر"
+    )
+    variant = models.ForeignKey(
+        ProductVariant, on_delete=models.CASCADE, verbose_name="تنوع محصول"
+    )
+    cooldown_until = models.DateTimeField("پایان کول‌داون")
+
+    class Meta:
+        unique_together = ('user', 'variant')
+        verbose_name = "کول‌داون رزرو سبد"
+        verbose_name_plural = "کول‌داون‌های رزرو سبد"
+
+    def __str__(self):
+        return f"{self.user.phone_number} - {self.variant} تا {self.cooldown_until}"

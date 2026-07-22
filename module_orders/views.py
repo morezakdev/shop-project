@@ -1,12 +1,20 @@
 from rest_framework.views import APIView
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 from django.db import transaction
 from drf_spectacular.utils import extend_schema
-from module_cart.utils import release_expired_cart_items
+
 from .models import Order, OrderItem
-from .serializers import OrderListSerializer, OrderDetailSerializer, CheckoutSerializer
+from .serializers import (
+    OrderListSerializer,
+    OrderDetailSerializer,
+    CheckoutSerializer,
+    QuickBuySerializer,
+)
 from module_cart.models import Cart
+from module_cart.utils import release_expired_cart_items, get_quickbuy_available
+from module_catalog.models import ProductVariant
 
 
 class OrderListView(generics.ListAPIView):
@@ -52,12 +60,23 @@ class CheckoutView(APIView):
             )
 
         with transaction.atomic():
-            total_price = sum(item.variant.price * item.quantity for item in cart_items)
+            for item in cart_items:
+                variant = (
+                    type(item.variant)
+                    .objects.select_for_update()
+                    .get(id=item.variant_id)
+                )
+                if item.quantity > variant.stock:
+                    return Response(
+                        {
+                            "detail": f"موجودی «{variant.product.name}» کافی نیست. موجودی فعلی: {variant.stock}"
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
+            total_price = sum(item.variant.price * item.quantity for item in cart_items)
             order = Order.objects.create(
-                user=request.user,
-                address=address,
-                total_price=total_price,
+                user=request.user, address=address, total_price=total_price
             )
 
             for item in cart_items:
@@ -70,7 +89,66 @@ class CheckoutView(APIView):
                     quantity=item.quantity,
                     price_at_purchase=item.variant.price,
                 )
+                variant = (
+                    type(item.variant)
+                    .objects.select_for_update()
+                    .get(id=item.variant_id)
+                )
+                variant.stock -= item.quantity
+                variant.save()
+
             cart_items.delete()
+
+        return Response(
+            OrderDetailSerializer(order).data, status=status.HTTP_201_CREATED
+        )
+
+
+class QuickBuyView(APIView):
+    """خرید فوری بدون رفتن به سبد - از کل موجودی باقی‌مونده استفاده می‌کنه"""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        request=QuickBuySerializer, responses={201: OrderDetailSerializer, 400: None}
+    )
+    def post(self, request):
+        serializer = QuickBuySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        variant_id = serializer.validated_data["variant_id"]
+        quantity = serializer.validated_data["quantity"]
+        address = serializer.validated_data["address"]
+
+        with transaction.atomic():
+            variant = get_object_or_404(
+                ProductVariant.objects.select_for_update(), id=variant_id
+            )
+            available = get_quickbuy_available(variant)
+
+            if quantity > available:
+                return Response(
+                    {
+                        "detail": f"موجودی کافی برای خرید سریع نیست. حداکثر ممکن: {available}"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            order = Order.objects.create(
+                user=request.user,
+                address=address,
+                total_price=variant.price * quantity,
+            )
+            OrderItem.objects.create(
+                order=order,
+                variant=variant,
+                product_name=variant.product.name,
+                color=variant.color,
+                size=variant.size,
+                quantity=quantity,
+                price_at_purchase=variant.price,
+            )
+            variant.stock -= quantity
+            variant.save()
 
         return Response(
             OrderDetailSerializer(order).data, status=status.HTTP_201_CREATED

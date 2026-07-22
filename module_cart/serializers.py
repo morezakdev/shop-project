@@ -1,9 +1,10 @@
 from rest_framework import serializers
 from .models import Cart, CartItem
 from module_catalog.models import ProductVariant
+from module_common.serializers import JalaliModelSerializer
 
 
-class CartItemSerializer(serializers.ModelSerializer):
+class CartItemSerializer(JalaliModelSerializer):
     product_name = serializers.CharField(source='variant.product.name', read_only=True)
     color = serializers.CharField(source='variant.color', read_only=True)
     size = serializers.CharField(source='variant.size', read_only=True)
@@ -23,7 +24,7 @@ class CartItemSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
-class CartSerializer(serializers.ModelSerializer):
+class CartSerializer(JalaliModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)
     total_price = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
     total_items = serializers.IntegerField(read_only=True)
