@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "module_common",
     "module_cart",
     "module_orders",
+    "module_payments",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -139,17 +140,18 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "otp": "3/min",
         "cart_add": "10/min",
+        "payment_callback": "20/min",
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 12,
     "EXCEPTION_HANDLER": "module_common.exceptions.custom_exception_handler",
 }
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Shop API',
-    'DESCRIPTION': 'API فروشگاه',
-    'VERSION': '1.0.0',
-    'SWAGGER_UI_SETTINGS': {
-        'persistAuthorization': True,
+    "TITLE": "Shop API",
+    "DESCRIPTION": "API فروشگاه",
+    "VERSION": "1.0.0",
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
     },
 }
 
@@ -163,3 +165,11 @@ SIMPLE_JWT = {
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+ZARINPAL_MERCHANT_ID = env(
+    "ZARINPAL_MERCHANT_ID", default="00000000-0000-0000-0000-000000000000"
+)
+ZARINPAL_SANDBOX = env("ZARINPAL_SANDBOX", default=True, cast=bool)
+ZARINPAL_CALLBACK_URL = env(
+    "ZARINPAL_CALLBACK_URL", default="http://127.0.0.1:8000/api/payments/callback/"
+)

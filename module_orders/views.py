@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from drf_spectacular.utils import extend_schema
-
+from module_payments.models import Payment
+from module_payments.utils import request_payment
 from .models import Order, OrderItem
 from .serializers import (
     OrderListSerializer,
@@ -36,9 +37,7 @@ class OrderDetailView(generics.RetrieveAPIView):
 class CheckoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    @extend_schema(
-        request=CheckoutSerializer, responses={200: OrderDetailSerializer, 400: None}
-    )
+    @extend_schema(request=CheckoutSerializer, responses={200: None, 400: None})
     def post(self, request):
         serializer = CheckoutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -107,8 +106,22 @@ class CheckoutView(APIView):
 
             cart_items.delete()
 
+        # اتصال مستقیم به درگاه پرداخت
+        authority, payment_url = request_payment(order)
+
+        if not authority:
+            return Response(
+                {"detail": "خطا در اتصال به درگاه پرداخت. لطفاً بعداً تلاش کنید"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        Payment.objects.create(
+            order=order, authority=authority, amount=order.total_price
+        )
+
         return Response(
-            OrderDetailSerializer(order).data, status=status.HTTP_201_CREATED
+            {"payment_url": payment_url, "order_id": order.id},
+            status=status.HTTP_200_OK,
         )
 
 
