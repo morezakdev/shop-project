@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "module_cart",
     "module_orders",
     "module_payments",
+    "module_wishlist",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",

@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from module_common.serializers import JalaliModelSerializer
 
 User = get_user_model()
 
@@ -67,3 +68,10 @@ class TokenResponseSerializer(serializers.Serializer):
 
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
+
+
+class UserProfileSerializer(JalaliModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "phone_number", "is_active", "date_joined"]
+        read_only_fields = fields

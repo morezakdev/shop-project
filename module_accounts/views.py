@@ -14,9 +14,14 @@ from .serializers import (
     MessageResponseSerializer,
     OTPResponseSerializer,
     TokenResponseSerializer,
+    UserProfileSerializer,
 )
 from rest_framework_simplejwt.exceptions import TokenError
 from .serializers import LogoutSerializer
+from module_orders.models import Order
+from module_orders.serializers import OrderListSerializer
+from module_wishlist.models import WishlistItem
+from module_wishlist.serializers import WishlistItemSerializer
 
 User = get_user_model()
 
@@ -371,3 +376,42 @@ class LogoutView(APIView):
             )
 
         return Response({"detail": "با موفقیت خارج شدید"}, status=status.HTTP_200_OK)
+
+
+class ProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(responses={200: UserProfileSerializer})
+    def get(self, request):
+        serializer = UserProfileSerializer(request.user)
+        return Response(serializer.data)
+
+
+class DashboardView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(responses={200: None})
+    def get(self, request):
+        user = request.user
+
+        profile_data = UserProfileSerializer(user).data
+
+        recent_orders = Order.objects.filter(user=user).order_by("-created_at")[:5]
+        orders_data = OrderListSerializer(recent_orders, many=True).data
+
+        recent_wishlist = (
+            WishlistItem.objects.filter(user=user)
+            .select_related("product")
+            .order_by("-created_at")[:5]
+        )
+        wishlist_data = WishlistItemSerializer(recent_wishlist, many=True).data
+
+        return Response(
+            {
+                "profile": profile_data,
+                "recent_orders": orders_data,
+                "recent_wishlist": wishlist_data,
+                "total_orders_count": Order.objects.filter(user=user).count(),
+                "total_wishlist_count": WishlistItem.objects.filter(user=user).count(),
+            }
+        )
