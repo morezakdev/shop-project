@@ -1,6 +1,29 @@
 from django.db import models
 from django.conf import settings
 from module_catalog.models import ProductVariant
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+
+class Coupon(models.Model):
+    code = models.CharField("کد تخفیف", max_length=50, unique=True)
+    percentage = models.PositiveIntegerField(
+        "درصد تخفیف", validators=[MinValueValidator(1), MaxValueValidator(100)]
+    )
+    max_uses = models.PositiveIntegerField("حداکثر تعداد استفاده کل")
+    used_count = models.PositiveIntegerField("تعداد استفاده‌شده", default=0)
+    is_active = models.BooleanField("فعال", default=True)
+    created_at = models.DateTimeField("تاریخ ایجاد", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "کد تخفیف"
+        verbose_name_plural = "کدهای تخفیف"
+
+    def __str__(self):
+        return f"{self.code} ({self.percentage}%)"
+
+    @property
+    def is_available(self):
+        return self.is_active and self.used_count < self.max_uses
 
 
 class Order(models.Model):
@@ -30,6 +53,17 @@ class Order(models.Model):
         "وضعیت", max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING
     )
     total_price = models.DecimalField("مبلغ کل", max_digits=14, decimal_places=0)
+    coupon = models.ForeignKey(
+        Coupon,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+        verbose_name="کد تخفیف",
+    )
+    discount_amount = models.DecimalField(
+        "مبلغ تخفیف", max_digits=14, decimal_places=0, default=0
+    )
     created_at = models.DateTimeField("تاریخ ثبت", auto_now_add=True)
     updated_at = models.DateTimeField("تاریخ بروزرسانی", auto_now=True)
 

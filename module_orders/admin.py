@@ -1,6 +1,22 @@
 from django.contrib import admin
 from module_common.utils import to_jalali_date
 from .models import Order, OrderItem
+from .models import Order, OrderItem, Coupon
+from module_common.admin import JalaliAdminMixin
+
+
+@admin.register(Coupon)
+class CouponAdmin(JalaliAdminMixin, admin.ModelAdmin):
+    jalali_date_fields = ["created_at"]
+    list_display = (
+        "code",
+        "percentage",
+        "used_count",
+        "max_uses",
+        "is_active",
+        "jalali_created_at",
+    )
+    search_fields = ("code",)
 
 
 class OrderItemInline(admin.TabularInline):

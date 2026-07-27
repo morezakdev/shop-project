@@ -6,7 +6,6 @@ from django.db import transaction
 from drf_spectacular.utils import extend_schema
 from module_payments.models import Payment
 from module_payments.utils import request_payment
-from .models import Order, OrderItem
 from .serializers import (
     OrderListSerializer,
     OrderDetailSerializer,
@@ -16,6 +15,7 @@ from .serializers import (
 from module_cart.models import Cart
 from module_cart.utils import release_expired_cart_items, get_quickbuy_available
 from module_catalog.models import ProductVariant
+from .models import Order, OrderItem, Coupon
 
 
 class OrderListView(generics.ListAPIView):
@@ -45,6 +45,7 @@ class CheckoutView(APIView):
         first_name = serializer.validated_data["first_name"]
         last_name = serializer.validated_data["last_name"]
         postal_code = serializer.validated_data["postal_code"]
+        coupon_code = serializer.validated_data.get("coupon_code", "").strip()
 
         try:
             cart = Cart.objects.get(user=request.user)
@@ -76,7 +77,32 @@ class CheckoutView(APIView):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
-            total_price = sum(item.variant.price * item.quantity for item in cart_items)
+            subtotal = sum(item.variant.price * item.quantity for item in cart_items)
+
+            coupon = None
+            discount_amount = 0
+
+            if coupon_code:
+                coupon = (
+                    Coupon.objects.select_for_update().filter(code=coupon_code).first()
+                )
+                if not coupon:
+                    return Response(
+                        {"detail": "کد تخفیف یافت نشد"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if not coupon.is_available:
+                    return Response(
+                        {"detail": "این کد تخفیف دیگر معتبر نیست"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                discount_amount = int(subtotal * coupon.percentage / 100)
+                coupon.used_count += 1
+                coupon.save()
+
+            total_price = subtotal - discount_amount
+
             order = Order.objects.create(
                 user=request.user,
                 address=address,
@@ -84,6 +110,8 @@ class CheckoutView(APIView):
                 last_name=last_name,
                 postal_code=postal_code,
                 total_price=total_price,
+                coupon=coupon,
+                discount_amount=discount_amount,
             )
 
             for item in cart_items:
@@ -106,7 +134,6 @@ class CheckoutView(APIView):
 
             cart_items.delete()
 
-        # اتصال مستقیم به درگاه پرداخت
         authority, payment_url = request_payment(order)
 
         if not authority:

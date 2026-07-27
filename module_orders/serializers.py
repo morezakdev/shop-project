@@ -3,6 +3,14 @@ from .models import Order, OrderItem
 from module_common.fields import JalaliDateTimeField
 
 
+class CheckoutSerializer(serializers.Serializer):
+    address = serializers.CharField(min_length=10, max_length=500)
+    first_name = serializers.CharField(min_length=2, max_length=100)
+    last_name = serializers.CharField(min_length=2, max_length=100)
+    postal_code = serializers.CharField(min_length=10, max_length=10)
+    coupon_code = serializers.CharField(required=False, allow_blank=True, default="")
+
+
 class OrderItemSerializer(serializers.ModelSerializer):
     total_price = serializers.DecimalField(
         max_digits=14, decimal_places=0, read_only=True
@@ -53,13 +61,6 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "items",
             "created_at",
         ]
-
-
-class CheckoutSerializer(serializers.Serializer):
-    address = serializers.CharField()
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
-    postal_code = serializers.CharField()
 
 
 class QuickBuySerializer(serializers.Serializer):
