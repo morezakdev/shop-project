@@ -135,17 +135,22 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
-    "DEFAULT_THROTTLE_CLASSES": [],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 12,
+    "EXCEPTION_HANDLER": "module_common.exceptions.custom_exception_handler",
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
     "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/min",
+        "user": "300/min",
         "otp": "3/min",
         "cart_add": "10/min",
         "payment_callback": "20/min",
     },
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 12,
-    "EXCEPTION_HANDLER": "module_common.exceptions.custom_exception_handler",
 }
 SPECTACULAR_SETTINGS = {
     "TITLE": "Shop API",
