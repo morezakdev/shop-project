@@ -183,3 +183,7 @@ ZARINPAL_SANDBOX = env("ZARINPAL_SANDBOX", default=True, cast=bool)
 ZARINPAL_CALLBACK_URL = env(
     "ZARINPAL_CALLBACK_URL", default="http://127.0.0.1:8000/api/payments/callback/"
 )
+
+
+STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
